@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+import math
 import random
 import time
 from dataclasses import dataclass
@@ -180,17 +181,23 @@ def add_tag_splits(runs: list[TaskRun], tag_splits: Dict[str, float] | None) -> 
     if not tag_splits:
         return
 
-    # Calculate exact number of runs for each split
+    # Round down each split's exact share, then hand the leftover runs to the
+    # splits with the largest fractional remainders (ties go to the earlier split)
     total_runs = len(runs)
-    split_counts = {
-        tag: int(proportion * total_runs) for tag, proportion in tag_splits.items()
+    total_proportion = sum(tag_splits.values())
+    exact_counts = {
+        tag: proportion / total_proportion * total_runs
+        for tag, proportion in tag_splits.items()
     }
-
-    # Handle rounding errors by adjusting the largest split
+    split_counts = {tag: math.floor(exact) for tag, exact in exact_counts.items()}
     remaining = total_runs - sum(split_counts.values())
-    if remaining != 0:
-        largest_split = max(split_counts.items(), key=lambda x: x[1])
-        split_counts[largest_split[0]] += remaining
+    by_remainder = sorted(
+        exact_counts,
+        key=lambda tag: exact_counts[tag] - split_counts[tag],
+        reverse=True,
+    )
+    for tag in by_remainder[:remaining]:
+        split_counts[tag] += 1
 
     # Create a list of tags with the correct counts
     tags_to_assign = []

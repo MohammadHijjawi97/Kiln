@@ -757,6 +757,59 @@ def test_add_tag_splits_rounding(base_task: Task):
     assert len(runs) == train_count + val_count + test_count
 
 
+@pytest.mark.parametrize(
+    "run_count,tag_splits,expected_counts",
+    [
+        (
+            3,
+            {"train": 0.4, "val": 0.25, "test": 0.25, "golden": 0.1},
+            {"train": 1, "val": 1, "test": 1, "golden": 0},
+        ),
+        (
+            10,
+            {"train": 0.4, "val": 0.25, "test": 0.25, "golden": 0.1},
+            {"train": 4, "val": 3, "test": 2, "golden": 1},
+        ),
+        (
+            5,
+            {"train": 0.4, "val": 0.25, "test": 0.25, "golden": 0.1},
+            {"train": 2, "val": 1, "test": 1, "golden": 1},
+        ),
+        (
+            100,
+            {"train": 0.71, "test": 0.29},
+            {"train": 71, "test": 29},
+        ),
+    ],
+)
+def test_add_tag_splits_leftover_goes_to_largest_remainders(
+    base_task: Task, run_count, tag_splits, expected_counts
+):
+    runs = [
+        TaskRun(
+            parent=base_task,
+            input=f"input {i}",
+            input_source=DataSource(
+                type=DataSourceType.file_import,
+                properties={"file_name": "test.csv"},
+            ),
+            output=TaskOutput(
+                output=f"output {i}",
+                source=DataSource(
+                    type=DataSourceType.file_import,
+                    properties={"file_name": "test.csv"},
+                ),
+            ),
+        )
+        for i in range(run_count)
+    ]
+
+    add_tag_splits(runs, tag_splits)
+
+    counts = {tag: sum(1 for run in runs if tag in run.tags) for tag in tag_splits}
+    assert counts == expected_counts
+
+
 def test_add_tag_splits_none(base_task: Task):
     """Test that None tag_splits is handled correctly."""
     runs = []
