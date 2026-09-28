@@ -335,6 +335,29 @@ def test_import_csv_utf8_encoding(base_task: Task, tmp_path):
     assert run.output.output == "salida áéí 你好👋"
 
 
+def test_import_csv_utf8_bom(base_task: Task, tmp_path):
+    """Excel's "CSV UTF-8" export starts the file with a byte order mark."""
+
+    file_path = tmp_path / "bom.csv"
+    file_path.write_bytes('"input","output"\nhola,adiós\n'.encode("utf-8-sig"))
+
+    importer = DatasetFileImporter(
+        base_task,
+        ImportConfig(
+            dataset_type=DatasetImportFormat.CSV,
+            dataset_path=str(file_path),
+            dataset_name="bom.csv",
+        ),
+    )
+
+    importer.create_runs_from_file()
+
+    runs = base_task.runs(include_intermediate_runs=True)
+    assert len(runs) == 1
+    assert runs[0].input == "hola"
+    assert runs[0].output.output == "adiós"
+
+
 def test_import_csv_structured_output(task_with_structured_output: Task, tmp_path):
     row_data = [
         {
@@ -980,6 +1003,27 @@ def test_import_csv_multiturn_basic(multiturn_task: Task, tmp_path):
     assert leaf.parent_task_run_id == root.id
     assert root.trace is not None and len(root.trace) == 2
     assert leaf.trace is not None and len(leaf.trace) == 4
+
+
+def test_import_csv_multiturn_utf8_bom(multiturn_task: Task, tmp_path):
+    """Excel's "CSV UTF-8" export starts the file with a byte order mark."""
+
+    file_path = tmp_path / "bom.csv"
+    row = dict_to_csv_row({"trace": json.dumps(_two_turn_trace())})
+    file_path.write_bytes(f"trace\n{row}\n".encode("utf-8-sig"))
+
+    importer = DatasetFileImporter(
+        multiturn_task,
+        ImportConfig(
+            dataset_type=DatasetImportFormat.CSV,
+            dataset_path=str(file_path),
+            dataset_name="bom.csv",
+        ),
+    )
+    result = importer.create_runs_from_file()
+
+    assert result.imported_run_count == 2
+    assert result.imported_conversation_count == 1
 
 
 def test_import_csv_multiturn_single_turn_conversation(multiturn_task: Task, tmp_path):

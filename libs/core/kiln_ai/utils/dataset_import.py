@@ -313,7 +313,7 @@ def _import_csv_single_turn(
     optional_headers = {"reasoning", "tags", "chain_of_thought"}  # optional headers
 
     rows: list[TaskRun] = []
-    with open(dataset_path, "r", newline="", encoding="utf-8") as csvfile:
+    with open(dataset_path, "r", newline="", encoding="utf-8-sig") as csvfile:
         reader = csv.DictReader(csvfile)
 
         # Check if we have headers
@@ -582,7 +582,7 @@ def _import_csv_multiturn(
     optional_headers = {"tags"}
 
     chains: list[list[TaskRun]] = []
-    with open(dataset_path, "r", newline="", encoding="utf-8") as csvfile:
+    with open(dataset_path, "r", newline="", encoding="utf-8-sig") as csvfile:
         reader = csv.DictReader(csvfile)
 
         if not reader.fieldnames:
